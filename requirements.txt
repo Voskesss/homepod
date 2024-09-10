@@ -1,0 +1,11 @@
+beautifulsoup4==4.12.3
+openai==1.43.1
+pygame==2.6.0
+python-dotenv==1.0.1
+RealtimeSTT==0.2.41
+requests==2.32.3
+spotipy==2.24.0
+tools==0.1.9
+yfinance==0.2.43
+icrawler==0.6.6
+python-weather==0.3.8
