@@ -115,17 +115,16 @@ def run_voice_assistant(circles, screen, background, draw_event, idle_event):
             print(f"Hot word gedetecteerd: {current_text}")
             
             conversation_active = True
-            conversation_start_time = time.time()
-            
-            while conversation_active and time.time() - conversation_start_time < 60:  # 60 seconden timeout
+            while conversation_active:
                 print("Assistent luistert... Zeg 'stop' om te beëindigen.")
                 
                 recorder.stop()
                 recorder.start()
-                user_question = wait_for_input(recorder, timeout=10)
+                user_question = wait_for_input(recorder, timeout=15)
                 
                 if not user_question:
-                    print("Geen input gedetecteerd. Wacht op nieuwe vraag of hot word.")
+                    print("Geen input gedetecteerd. Einde van de conversatie.")
+                    assist.TTS("Ik heb een tijdje niets gehoord. Als je nog vragen hebt, zeg dan 'Happy' om me opnieuw te activeren.")
                     break
                 
                 print(f"Gebruikersvraag: {user_question}")
@@ -145,26 +144,32 @@ def run_voice_assistant(circles, screen, background, draw_event, idle_event):
                 
                 # Verwerk de vraag met tools.parse_command
                 response = tools.parse_command(user_question)
-                
-                if response:
+                print(f"Ruwe response van parse_command: {repr(response)}")
+
+                if response and isinstance(response, str) and response.strip():
+                    print(f"Antwoord van assistent: {response}")
                     assist.TTS(response)
                 else:
-                    assist.TTS("Excuses, ik kon geen antwoord vinden op je vraag.")
-                
-                # Reset voor de volgende vraag
-                recorder.stop()
-                recorder.start()
+                    error_message = "Excuses, ik kon geen antwoord vinden op je vraag."
+                    print(f"Antwoord van assistent: {error_message}")
+                    assist.TTS(error_message)
                 
                 # Indicate that the voice assistant is done drawing
                 idle_event.set()
                 draw_event.clear()
                 
-                conversation_start_time = time.time()  # Reset de timer voor de volgende vraag
+                # Pauze na het antwoord
+                time.sleep(2)
+                assist.TTS("Heb je nog een vraag?")
+                
+                # Reset voor de volgende vraag
+                recorder.stop()
+                recorder.start()
         
         # Kort wachten om CPU-gebruik te verminderen
         time.sleep(0.1)
 
-def wait_for_input(recorder, timeout=10):
+def wait_for_input(recorder, timeout=15):
     start_time = time.time()
     while time.time() - start_time < timeout:
         user_input = recorder.text()
