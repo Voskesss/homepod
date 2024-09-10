@@ -8,11 +8,16 @@ import tools
 from RealtimeSTT import AudioToTextRecorder
 import threading
 import queue
+import platform
 
 # Globale variabelen
 screen_update_queue = queue.Queue()
 draw_event = threading.Event()
 idle_event = threading.Event()
+
+# Functie om te controleren of we op een Raspberry Pi draaien
+def is_raspberry_pi():
+    return platform.system() == "Linux" and platform.machine().startswith("arm")
 
 class AppCircle:
     def __init__(self, center, app_index, screen_size):
@@ -25,11 +30,11 @@ class AppCircle:
     def load_image(self, app_index):
         path = f'./apps/app_{app_index}/app_{app_index}.png'
         try:
-            img = pygame.image.load(path)
+            img = pygame.image.load(path).convert_alpha()
             img = pygame.transform.scale(img, (2 * self.radius, 2 * self.radius))
             return img
-        except FileNotFoundError:
-            print(f"Image file not found: {path}")
+        except pygame.error as e:
+            print(f"Kon afbeelding niet laden: {path}. Fout: {e}")
             return None
 
     def draw(self, screen):
@@ -173,8 +178,13 @@ def handle_screen_updates(screen):
 
 def run_home_screen(screen):
     screen_size = screen.get_size()
-    background = pygame.image.load('./resources/background.jpg')
-    background = pygame.transform.scale(background, screen_size)
+    try:
+        background = pygame.image.load('./resources/background.jpg').convert()
+        background = pygame.transform.scale(background, screen_size)
+    except pygame.error as e:
+        print(f"Kon achtergrondafbeelding niet laden. Fout: {e}")
+        background = pygame.Surface(screen_size)
+        background.fill((0, 0, 0))  # Zwarte achtergrond als fallback
     
     circles = create_circles(screen_size)
     
@@ -212,7 +222,19 @@ def run_home_screen(screen):
 
 if __name__ == '__main__':
     pygame.init()
-    screen = pygame.display.set_mode((1080, 1080), pygame.SWSURFACE)
+    
+    if is_raspberry_pi():
+        # Instellingen voor Raspberry Pi
+        os.environ['SDL_VIDEODRIVER'] = 'fbcon'
+        os.environ['SDL_FBDEV'] = '/dev/fb0'
+        try:
+            screen = pygame.display.set_mode((1080, 1080), pygame.FULLSCREEN)
+        except pygame.error:
+            print("Kon scherm niet in FULLSCREEN modus zetten, val terug op standaard modus.")
+            screen = pygame.display.set_mode((1080, 1080))
+    else:
+        # Instellingen voor andere systemen (zoals Mac voor testen)
+        screen = pygame.display.set_mode((1080, 1080))
 
     run_home_screen(screen)
 
