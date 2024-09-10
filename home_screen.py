@@ -101,7 +101,7 @@ def apply_blur_ring_and_text(screen, text, blue_ring_thickness=100):
     pygame.display.flip()
 
 def run_voice_assistant(circles, screen, background, draw_event, idle_event):
-    recorder = AudioToTextRecorder(spinner=False, model="tiny.en", language="en", post_speech_silence_duration=0.1, silero_sensitivity=0.4)
+    recorder = AudioToTextRecorder(spinner=False, model="tiny.en", language="en", post_speech_silence_duration=0.1, silero_sensitivity=0.2)
     hot_words = ["happy", "alexa"]
     stop_words = ["stop", "end", "goodbye"]
     print("Zeg iets...")
@@ -144,15 +144,15 @@ def run_voice_assistant(circles, screen, background, draw_event, idle_event):
                 
                 # Verwerk de vraag met tools.parse_command
                 response = tools.parse_command(user_question)
-                print(f"Ruwe response van parse_command: {repr(response)}")
-
+                print(f"Antwoord van assistent: {response}")
+                
                 if response and isinstance(response, str) and response.strip():
-                    print(f"Antwoord van assistent: {response}")
                     assist.TTS(response)
+                    print(f"Antwoord van assistent: {response}")
                 else:
                     error_message = "Excuses, ik kon geen antwoord vinden op je vraag."
-                    print(f"Antwoord van assistent: {error_message}")
                     assist.TTS(error_message)
+                    print(f"Antwoord van assistent: {error_message}")
                 
                 # Indicate that the voice assistant is done drawing
                 idle_event.set()
