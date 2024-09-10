@@ -225,7 +225,7 @@ def run_home_screen(screen):
 
 if __name__ == '__main__':
     pygame.init()
-    screen = pygame.display.set_mode((1080, 1080))
+    screen = pygame.display.set_mode((1080, 1080) , pygame.SWSURFACE)
 
     # Run the home screen
     run_home_screen(screen)
