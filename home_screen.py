@@ -103,29 +103,39 @@ def apply_blur_ring_and_text(screen, text, blue_ring_thickness=100):
 def run_voice_assistant(circles, screen, background, draw_event, idle_event):
     recorder = AudioToTextRecorder(spinner=False, model="tiny.en", language="en", post_speech_silence_duration=0.1, silero_sensitivity=0.4)
     hot_words = ["happy", "alexa"]
+    stop_words = ["stop", "end", "goodbye"]
     print("Zeg iets...")
     
     while True:
         current_text = recorder.text()
-        print(f"Huidige tekst: {current_text}")
+        if current_text:
+            print(f"Huidige tekst: {current_text}")
         
         if any(hot_word in current_text.lower() for hot_word in hot_words):
             print(f"Hot word gedetecteerd: {current_text}")
             
-            # Geef een audio cue dat de assistent luistert
-            print("Assistent luistert... Stel je vraag.")
+            conversation_active = True
+            conversation_start_time = time.time()
             
-            # Wacht op de gebruikersvraag
-            recorder.stop()
-            recorder.start()
-            user_question = ""
-            while not user_question:
-                user_question = recorder.text()
-                time.sleep(0.1)
-            
-            print(f"Gebruikersvraag: {user_question}")
-            
-            if user_question:
+            while conversation_active and time.time() - conversation_start_time < 60:  # 60 seconden timeout
+                print("Assistent luistert... Zeg 'stop' om te beëindigen.")
+                
+                recorder.stop()
+                recorder.start()
+                user_question = wait_for_input(recorder, timeout=10)
+                
+                if not user_question:
+                    print("Geen input gedetecteerd. Wacht op nieuwe vraag of hot word.")
+                    break
+                
+                print(f"Gebruikersvraag: {user_question}")
+                
+                if any(stop_word in user_question.lower() for stop_word in stop_words):
+                    print("Assistent gestopt.")
+                    assist.TTS("Tot ziens!")
+                    conversation_active = False
+                    break
+                
                 # Indicate that voice assistant is drawing
                 draw_event.set()
                 idle_event.clear()
@@ -134,7 +144,12 @@ def run_voice_assistant(circles, screen, background, draw_event, idle_event):
                 apply_blur_ring_and_text(screen, user_question, blue_ring_thickness=100)
                 
                 # Verwerk de vraag met tools.parse_command
-                tools.parse_command(user_question)
+                response = tools.parse_command(user_question)
+                
+                if response:
+                    assist.TTS(response)
+                else:
+                    assist.TTS("Excuses, ik kon geen antwoord vinden op je vraag.")
                 
                 # Reset voor de volgende vraag
                 recorder.stop()
@@ -143,9 +158,20 @@ def run_voice_assistant(circles, screen, background, draw_event, idle_event):
                 # Indicate that the voice assistant is done drawing
                 idle_event.set()
                 draw_event.clear()
+                
+                conversation_start_time = time.time()  # Reset de timer voor de volgende vraag
         
         # Kort wachten om CPU-gebruik te verminderen
         time.sleep(0.1)
+
+def wait_for_input(recorder, timeout=10):
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        user_input = recorder.text()
+        if user_input and len(user_input) > 3:  # Negeer zeer korte inputs
+            return user_input
+        time.sleep(0.1)
+    return None
 
 def run_home_screen(screen):
     screen_size = screen.get_size()
